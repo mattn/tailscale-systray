@@ -52,6 +52,7 @@ func onReady() {
 		}
 		items := map[string]*Item{}
 		for {
+			mTailscaleServices.Hide()
 			b, err := exec.Command("tailscale", "ip", "-4").CombinedOutput()
 			if err != nil {
 				time.Sleep(10 * time.Second)
@@ -62,8 +63,14 @@ func onReady() {
 			b, err = exec.Command("tailscale", "status").CombinedOutput()
 			if err != nil {
 				systray.SetTooltip("Tailscale: Disconnected")
+				mThisDevice.SetTitle("This device: disconnected")
+				mNetworkDevices.Hide()
+				systray.SetIcon(iconOff)
+				time.Sleep(10 * time.Second)
 				continue
 			}
+			mNetworkDevices.Show()
+			systray.SetIcon(iconOn)
 			systray.SetTooltip("Tailscale: Connected")
 
 			for _, v := range items {
@@ -87,6 +94,7 @@ func onReady() {
 				if strings.HasPrefix(title, "(") {
 					title = strings.Trim(title, `()"`)
 					sub = mTailscaleServices
+					mTailscaleServices.Show()
 				} else {
 					sub = mMyDevices
 				}
@@ -109,7 +117,7 @@ func onReady() {
 							}
 							beeep.Notify(
 								item.title,
-								fmt.Sprintf("Copy the IP address (%s) to the Clipboard", item.ip),
+								fmt.Sprintf("IP address of %s copied to clipboard", item.title),
 								icon,
 							)
 						}
