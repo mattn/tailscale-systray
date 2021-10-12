@@ -25,24 +25,23 @@ func main() {
 }
 
 func onReady() {
-    exepath, err := os.Executable()
-    if err != nil {
-        panic(err)
-    }
-    icon := filepath.Join(filepath.Dir(exepath), "on.png")
+	exepath, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+	icon := filepath.Join(filepath.Dir(exepath), "on.png")
 
 	systray.SetIcon(iconOn)
 	mThisDevice := systray.AddMenuItem("This device:", "")
 	mNetworkDevices := systray.AddMenuItem("Network Devices", "")
 	mMyDevices := mNetworkDevices.AddSubMenuItem("My Devices", "")
 	mTailscaleServices := mNetworkDevices.AddSubMenuItem("Tailscale Services", "")
-    systray.AddSeparator()
+	systray.AddSeparator()
 	mExit := systray.AddMenuItem("Exit", "")
 	go func() {
 		<-mExit.ClickedCh
 		systray.Quit()
 	}()
-
 
 	go func() {
 		type Item struct {
@@ -58,7 +57,7 @@ func onReady() {
 				time.Sleep(10 * time.Second)
 				continue
 			}
-            myIP := strings.TrimSpace(string(b))
+			myIP := strings.TrimSpace(string(b))
 
 			b, err = exec.Command("tailscale", "status").CombinedOutput()
 			if err != nil {
@@ -79,10 +78,10 @@ func onReady() {
 				ip := fields[0]
 				title := fields[1]
 
-                if ip == myIP {
-                    mThisDevice.SetTitle(fmt.Sprintf("This device: %s (%s)", title, ip))
-                    continue
-                }
+				if ip == myIP {
+					mThisDevice.SetTitle(fmt.Sprintf("This device: %s (%s)", title, ip))
+					continue
+				}
 
 				var sub *systray.MenuItem
 				if strings.HasPrefix(title, "(") {
