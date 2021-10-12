@@ -101,6 +101,7 @@ func onReady() {
 						found: true,
 					}
 					go func(item *Item) {
+						// TODO fix race condition
 						for {
 							<-item.menu.ClickedCh
 							if item.menu.Disabled() {
@@ -118,6 +119,7 @@ func onReady() {
 
 			for k, v := range items {
 				if !v.found {
+					// TODO fix race condition
 					v.menu.Disable()
 					v.menu.Hide()
 					delete(items, k)
