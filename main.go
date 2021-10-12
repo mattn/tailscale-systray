@@ -64,7 +64,7 @@ func onReady() {
 				systray.SetTooltip("Tailscale: Disconnected")
 				continue
 			}
-			systray.SetTooltip("Tailscale: Disconnected")
+			systray.SetTooltip("Tailscale: Connected")
 
 			for _, v := range items {
 				v.found = false
