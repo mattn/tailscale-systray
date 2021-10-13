@@ -94,7 +94,7 @@ func onReady() {
 			}
 			myIP := strings.TrimSpace(string(b))
 
-			b, err = exec.Command("tailscale", "status").CombinedOutput()
+			b, err = exec.Command("tailscale", "status").Output()
 			if err != nil {
 				if enabled {
 					systray.SetTooltip("Tailscale: Disconnected")
