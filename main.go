@@ -31,7 +31,41 @@ func onReady() {
 	}
 	icon := filepath.Join(filepath.Dir(exepath), "on.png")
 
-	systray.SetIcon(iconOn)
+	systray.SetIcon(iconOff)
+	mConnect := systray.AddMenuItem("Connect", "")
+	go func() {
+		for {
+			if _, ok := <-mConnect.ClickedCh; !ok {
+				break
+			}
+			b, err := exec.Command("pkexec", "tailscale", "up").CombinedOutput()
+			if err != nil {
+				beeep.Notify(
+					"Tailscale",
+					string(b),
+					"",
+				)
+			}
+		}
+	}()
+	mDisconnect := systray.AddMenuItem("Disconnect", "")
+	mDisconnect.Disable()
+	go func() {
+		for {
+			if _, ok := <-mDisconnect.ClickedCh; !ok {
+				break
+			}
+			b, err := exec.Command("pkexec", "tailscale", "down").CombinedOutput()
+			if err != nil {
+				beeep.Notify(
+					"Tailscale",
+					string(b),
+					"",
+				)
+			}
+		}
+	}()
+	systray.AddSeparator()
 	mThisDevice := systray.AddMenuItem("This device:", "")
 	mNetworkDevices := systray.AddMenuItem("Network Devices", "")
 	mMyDevices := mNetworkDevices.AddSubMenuItem("My Devices", "")
@@ -51,9 +85,17 @@ func onReady() {
 			found bool
 		}
 		items := map[string]*Item{}
+		enabled := false
 		for {
 			b, err := exec.Command("tailscale", "ip", "-4").CombinedOutput()
 			if err != nil {
+				if enabled {
+					systray.SetTooltip("Tailscale: Disconnected")
+					mConnect.Enable()
+					mDisconnect.Disable()
+					systray.SetIcon(iconOff)
+					enabled = false
+				}
 				time.Sleep(10 * time.Second)
 				continue
 			}
@@ -61,10 +103,23 @@ func onReady() {
 
 			b, err = exec.Command("tailscale", "status").CombinedOutput()
 			if err != nil {
-				systray.SetTooltip("Tailscale: Disconnected")
+				if enabled {
+					systray.SetTooltip("Tailscale: Disconnected")
+					mConnect.Enable()
+					mDisconnect.Disable()
+					systray.SetIcon(iconOff)
+					enabled = false
+					time.Sleep(time.Second)
+				}
 				continue
 			}
-			systray.SetTooltip("Tailscale: Connected")
+			if !enabled {
+				systray.SetTooltip("Tailscale: Connected")
+				mConnect.Disable()
+				mDisconnect.Enable()
+				systray.SetIcon(iconOn)
+				enabled = true
+			}
 
 			for _, v := range items {
 				v.found = false
@@ -103,8 +158,8 @@ func onReady() {
 					go func(item *Item) {
 						// TODO fix race condition
 						for {
-							<-item.menu.ClickedCh
-							if item.menu.Disabled() {
+							_, ok := <-item.menu.ClickedCh
+							if !ok {
 								break
 							}
 							beeep.Notify(
@@ -120,7 +175,6 @@ func onReady() {
 			for k, v := range items {
 				if !v.found {
 					// TODO fix race condition
-					v.menu.Disable()
 					v.menu.Hide()
 					delete(items, k)
 				}
