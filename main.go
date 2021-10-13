@@ -163,7 +163,15 @@ func onReady() {
 							if !ok {
 								break
 							}
-                            clipboard.WriteAll(item.ip)
+							err := clipboard.WriteAll(item.ip)
+							if err != nil {
+								beeep.Notify(
+									"Tailscale",
+									string(b),
+									"",
+								)
+								return
+							}
 							beeep.Notify(
 								item.title,
 								fmt.Sprintf("Copy the IP address (%s) to the Clipboard", item.ip),
