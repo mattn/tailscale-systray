@@ -23,42 +23,34 @@ func main() {
 	systray.Run(onReady, nil)
 }
 
+func doConnectionControl(m *systray.MenuItem, verb string) {
+	for {
+		if _, ok := <-m.ClickedCh; !ok {
+			break
+		}
+		b, err := exec.Command("pkexec", "tailscale", verb).CombinedOutput()
+		if err != nil {
+			beeep.Notify(
+				"Tailscale",
+				string(b),
+				"",
+			)
+		}
+	}
+}
+
 func onReady() {
 	systray.SetIcon(iconOff)
+
 	mConnect := systray.AddMenuItem("Connect", "")
-	go func() {
-		for {
-			if _, ok := <-mConnect.ClickedCh; !ok {
-				break
-			}
-			b, err := exec.Command("pkexec", "tailscale", "up").CombinedOutput()
-			if err != nil {
-				beeep.Notify(
-					"Tailscale",
-					string(b),
-					"",
-				)
-			}
-		}
-	}()
+	mConnect.Enable()
+	go doConnectionControl(mConnect, "up")
 	mDisconnect := systray.AddMenuItem("Disconnect", "")
 	mDisconnect.Disable()
-	go func() {
-		for {
-			if _, ok := <-mDisconnect.ClickedCh; !ok {
-				break
-			}
-			b, err := exec.Command("pkexec", "tailscale", "down").CombinedOutput()
-			if err != nil {
-				beeep.Notify(
-					"Tailscale",
-					string(b),
-					"",
-				)
-			}
-		}
-	}()
+	go doConnectionControl(mConnect, "down")
+
 	systray.AddSeparator()
+
 	mThisDevice := systray.AddMenuItem("This device:", "")
 	mNetworkDevices := systray.AddMenuItem("Network Devices", "")
 	mMyDevices := mNetworkDevices.AddSubMenuItem("My Devices", "")
