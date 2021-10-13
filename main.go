@@ -3,7 +3,9 @@ package main
 import (
 	_ "embed"
 	"fmt"
+	"log"
 	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 
@@ -24,7 +26,7 @@ func main() {
 }
 
 func executable(command string) bool {
-	_, err := exec.LookPath("pkexec")
+	_, err := exec.LookPath(command)
 	return err == nil
 }
 
@@ -67,19 +69,17 @@ func onReady() {
 	mMyDevices := mNetworkDevices.AddSubMenuItem("My Devices", "")
 	mTailscaleServices := mNetworkDevices.AddSubMenuItem("Tailscale Services", "")
 
-	if executable("x-www-browser") {
-		systray.AddSeparator()
-		mAdminConsole := systray.AddMenuItem("Admin Console...", "")
-		go func() {
-			for {
-				_, ok := <-mAdminConsole.ClickedCh
-				if !ok {
-					break
-				}
-				exec.Command("x-www-browser", "https://login.tailscale.com/admin/machines").Start()
+	systray.AddSeparator()
+	mAdminConsole := systray.AddMenuItem("Admin Console...", "")
+	go func() {
+		for {
+			_, ok := <-mAdminConsole.ClickedCh
+			if !ok {
+				break
 			}
-		}()
-	}
+			openBrowser("https://login.tailscale.com/admin/machines")
+		}
+	}()
 
 	systray.AddSeparator()
 
@@ -204,4 +204,21 @@ func onReady() {
 			time.Sleep(10 * time.Second)
 		}
 	}()
+}
+
+func openBrowser(url string) {
+	var err error
+	switch runtime.GOOS {
+	case "linux":
+		err = exec.Command("xdg-open", url).Start()
+	case "windows":
+		err = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
+	case "darwin":
+		err = exec.Command("open", url).Start()
+	default:
+		err = fmt.Errorf("unsupported platform")
+	}
+	if err != nil {
+		log.Printf("could not open link: %v", err)
+	}
 }
