@@ -3,9 +3,7 @@ package main
 import (
 	_ "embed"
 	"fmt"
-	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -26,12 +24,6 @@ func main() {
 }
 
 func onReady() {
-	exepath, err := os.Executable()
-	if err != nil {
-		panic(err)
-	}
-	icon := filepath.Join(filepath.Dir(exepath), "on.png")
-
 	systray.SetIcon(iconOff)
 	mConnect := systray.AddMenuItem("Connect", "")
 	go func() {
@@ -175,7 +167,7 @@ func onReady() {
 							beeep.Notify(
 								item.title,
 								fmt.Sprintf("Copy the IP address (%s) to the Clipboard", item.ip),
-								icon,
+								"",
 							)
 						}
 					}(items[title])
