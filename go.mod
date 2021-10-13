@@ -13,5 +13,4 @@ require (
 	github.com/godbus/dbus/v5 v5.0.5 // indirect
 	github.com/gopherjs/gopherjs v0.0.0-20211004101933-6b77bd30416d // indirect
 	golang.org/x/sys v0.0.0-20211007075335-d3039528d8ac // indirect
-	golang.org/x/tools v0.1.7 // indirect
 )

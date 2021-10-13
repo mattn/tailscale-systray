@@ -23,6 +23,11 @@ func main() {
 	systray.Run(onReady, nil)
 }
 
+func executable(command string) bool {
+	_, err := exec.LookPath("pkexec")
+	return err == nil
+}
+
 func doConnectionControl(m *systray.MenuItem, verb string) {
 	for {
 		if _, ok := <-m.ClickedCh; !ok {
@@ -44,10 +49,16 @@ func onReady() {
 
 	mConnect := systray.AddMenuItem("Connect", "")
 	mConnect.Enable()
-	go doConnectionControl(mConnect, "up")
 	mDisconnect := systray.AddMenuItem("Disconnect", "")
 	mDisconnect.Disable()
-	go doConnectionControl(mConnect, "down")
+
+	if executable("pkexec") {
+		go doConnectionControl(mConnect, "up")
+		go doConnectionControl(mDisconnect, "down")
+	} else {
+		mConnect.Hide()
+		mDisconnect.Hide()
+	}
 
 	systray.AddSeparator()
 
@@ -55,7 +66,23 @@ func onReady() {
 	mNetworkDevices := systray.AddMenuItem("Network Devices", "")
 	mMyDevices := mNetworkDevices.AddSubMenuItem("My Devices", "")
 	mTailscaleServices := mNetworkDevices.AddSubMenuItem("Tailscale Services", "")
+
+	if executable("x-www-browser") {
+		systray.AddSeparator()
+		mAdminConsole := systray.AddMenuItem("Admin Console...", "")
+		go func() {
+			for {
+				_, ok := <-mAdminConsole.ClickedCh
+				if !ok {
+					break
+				}
+				exec.Command("x-www-browser", "https://login.tailscale.com/admin/machines").Start()
+			}
+		}()
+	}
+
 	systray.AddSeparator()
+
 	mExit := systray.AddMenuItem("Exit", "")
 	go func() {
 		<-mExit.ClickedCh
