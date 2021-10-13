@@ -147,6 +147,22 @@ func onReady() {
 
 				if ip == myIP {
 					mThisDevice.SetTitle(fmt.Sprintf("This device: %s (%s)", title, ip))
+					go func(mThisDevice *systray.MenuItem) {
+						for {
+							_, ok := <-mThisDevice.ClickedCh
+							if !ok {
+								break
+							}
+							err := clipboard.WriteAll(ip)
+							if err == nil {
+								beeep.Notify(
+									"This device",
+									fmt.Sprintf("Copy the IP address (%s) to the Clipboard", ip),
+									"",
+								)
+							}
+						}
+					}(mThisDevice)
 					continue
 				}
 
