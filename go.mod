@@ -3,6 +3,7 @@ module github.com/mattn/tailscale-systray
 go 1.17
 
 require (
+	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/gen2brain/beeep v0.0.0-20210529141713-5586760f0cc1 // indirect
 	github.com/getlantern/context v0.0.0-20190109183933-c447772a6520 // indirect
 	github.com/getlantern/errors v1.0.1 // indirect

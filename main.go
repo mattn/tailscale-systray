@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/atotto/clipboard"
 	"github.com/gen2brain/beeep"
 	"github.com/getlantern/systray"
 )
@@ -162,6 +163,7 @@ func onReady() {
 							if !ok {
 								break
 							}
+                            clipboard.WriteAll(item.ip)
 							beeep.Notify(
 								item.title,
 								fmt.Sprintf("Copy the IP address (%s) to the Clipboard", item.ip),
