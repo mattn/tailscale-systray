@@ -80,7 +80,7 @@ func onReady() {
 		items := map[string]*Item{}
 		enabled := false
 		for {
-			b, err := exec.Command("tailscale", "ip", "-4").CombinedOutput()
+			b, err := exec.Command("tailscale", "ip", "-4").Output()
 			if err != nil {
 				if enabled {
 					systray.SetTooltip("Tailscale: Disconnected")
