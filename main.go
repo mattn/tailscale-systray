@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/atotto/clipboard"
@@ -19,6 +20,11 @@ var (
 	iconOn []byte
 	//go:embed icon/off.png
 	iconOff []byte
+)
+
+var (
+	mu   sync.RWMutex
+	myIP string
 )
 
 func main() {
@@ -65,6 +71,29 @@ func onReady() {
 	systray.AddSeparator()
 
 	mThisDevice := systray.AddMenuItem("This device:", "")
+	go func(mThisDevice *systray.MenuItem) {
+		for {
+			_, ok := <-mThisDevice.ClickedCh
+			if !ok {
+				break
+			}
+			mu.RLock()
+			if myIP == "" {
+				mu.RUnlock()
+				continue
+			}
+			err := clipboard.WriteAll(myIP)
+			if err == nil {
+				beeep.Notify(
+					"This device",
+					fmt.Sprintf("Copy the IP address (%s) to the Clipboard", myIP),
+					"",
+				)
+			}
+			mu.RUnlock()
+		}
+	}(mThisDevice)
+
 	mNetworkDevices := systray.AddMenuItem("Network Devices", "")
 	mMyDevices := mNetworkDevices.AddSubMenuItem("My Devices", "")
 	mTailscaleServices := mNetworkDevices.AddSubMenuItem("Tailscale Services", "")
@@ -111,7 +140,10 @@ func onReady() {
 				time.Sleep(10 * time.Second)
 				continue
 			}
-			myIP := strings.TrimSpace(string(b))
+
+			mu.Lock()
+			myIP = strings.TrimSpace(string(b))
+			mu.Unlock()
 
 			b, err = exec.Command("tailscale", "status").Output()
 			if err != nil {
