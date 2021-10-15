@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/atotto/clipboard"
@@ -19,6 +20,11 @@ var (
 	iconOn []byte
 	//go:embed icon/off.png
 	iconOff []byte
+)
+
+var (
+	mu   sync.RWMutex
+	myIP string
 )
 
 func main() {
@@ -65,6 +71,29 @@ func onReady() {
 	systray.AddSeparator()
 
 	mThisDevice := systray.AddMenuItem("This device:", "")
+	go func(mThisDevice *systray.MenuItem) {
+		for {
+			_, ok := <-mThisDevice.ClickedCh
+			if !ok {
+				break
+			}
+			mu.RLock()
+			if myIP == "" {
+				mu.RUnlock()
+				continue
+			}
+			err := clipboard.WriteAll(myIP)
+			if err == nil {
+				beeep.Notify(
+					"This device",
+					fmt.Sprintf("Copy the IP address (%s) to the Clipboard", myIP),
+					"",
+				)
+			}
+			mu.RUnlock()
+		}
+	}(mThisDevice)
+
 	mNetworkDevices := systray.AddMenuItem("Network Devices", "")
 	mMyDevices := mNetworkDevices.AddSubMenuItem("My Devices", "")
 	mTailscaleServices := mNetworkDevices.AddSubMenuItem("Tailscale Services", "")
@@ -98,7 +127,6 @@ func onReady() {
 		}
 		items := map[string]*Item{}
 		enabled := false
-		enabledCh := make(chan bool, 1)
 		for {
 			b, err := exec.Command("tailscale", "ip", "-4").Output()
 			if err != nil {
@@ -108,14 +136,14 @@ func onReady() {
 					mDisconnect.Disable()
 					systray.SetIcon(iconOff)
 					enabled = false
-					if len(enabledCh) == 0 {
-						enabledCh <- false
-					}
 				}
 				time.Sleep(10 * time.Second)
 				continue
 			}
-			myIP := strings.TrimSpace(string(b))
+
+			mu.Lock()
+			myIP = strings.TrimSpace(string(b))
+			mu.Unlock()
 
 			b, err = exec.Command("tailscale", "status").Output()
 			if err != nil {
@@ -125,9 +153,6 @@ func onReady() {
 					mDisconnect.Disable()
 					systray.SetIcon(iconOff)
 					enabled = false
-					if len(enabledCh) == 0 {
-						enabledCh <- false
-					}
 					time.Sleep(time.Second)
 				}
 				continue
@@ -138,30 +163,6 @@ func onReady() {
 				mDisconnect.Enable()
 				systray.SetIcon(iconOn)
 				enabled = true
-
-				go func(mThisDevice *systray.MenuItem) {
-				L:
-					for {
-						select {
-						case _, ok := <-mThisDevice.ClickedCh:
-							if !ok {
-								break L
-							}
-							err := clipboard.WriteAll(myIP)
-							if err == nil {
-								beeep.Notify(
-									"This device",
-									fmt.Sprintf("Copy the IP address (%s) to the Clipboard", myIP),
-									"",
-								)
-							}
-						case active, ok := <-enabledCh:
-							if !active || !ok {
-								break L
-							}
-						}
-					}
-				}(mThisDevice)
 			}
 
 			for _, v := range items {
