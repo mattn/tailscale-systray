@@ -154,15 +154,14 @@ func onReady() {
 					continue
 				}
 
-				if _, ok := deviceGroup[account]; !ok {
-					deviceGroup[account] = mNetworkDevices.AddSubMenuItem(account, "")
-				}
-
 				var sub *systray.MenuItem
 				if strings.HasPrefix(title, "(") {
 					title = strings.Trim(title, `()"`)
 					sub = mTailscaleServices
 				} else {
+					if _, ok := deviceGroup[account]; !ok {
+						deviceGroup[account] = mNetworkDevices.AddSubMenuItem(account, "")
+					}
 					sub = deviceGroup[account]
 				}
 
