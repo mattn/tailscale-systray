@@ -95,7 +95,6 @@ func onReady() {
 	}(mThisDevice)
 
 	mNetworkDevices := systray.AddMenuItem("Network Devices", "")
-	mMyDevices := mNetworkDevices.AddSubMenuItem("My Devices", "")
 	mTailscaleServices := mNetworkDevices.AddSubMenuItem("Tailscale Services", "")
 
 	systray.AddSeparator()
@@ -126,6 +125,7 @@ func onReady() {
 			found bool
 		}
 		items := map[string]*Item{}
+		deviceGroup := map[string]*systray.MenuItem{}
 		enabled := false
 		for {
 			b, err := exec.Command("tailscale", "ip", "-4").Output()
@@ -176,8 +176,12 @@ func onReady() {
 
 				ip := fields[0]
 				title := fields[1]
+				account := fields[2]
 
 				if ip == myIP {
+					if _, ok := deviceGroup[account]; !ok {
+						deviceGroup[account] = mNetworkDevices.AddSubMenuItem("My Devices", "")
+					}
 					mThisDevice.SetTitle(fmt.Sprintf("This device: %s (%s)", title, ip))
 					continue
 				}
@@ -187,7 +191,10 @@ func onReady() {
 					title = strings.Trim(title, `()"`)
 					sub = mTailscaleServices
 				} else {
-					sub = mMyDevices
+					if _, ok := deviceGroup[account]; !ok {
+						deviceGroup[account] = mNetworkDevices.AddSubMenuItem(account, "")
+					}
+					sub = deviceGroup[account]
 				}
 
 				if item, ok := items[title]; ok {
