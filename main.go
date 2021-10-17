@@ -56,9 +56,9 @@ func onReady() {
 	systray.SetIcon(iconOff)
 
 	mConnect := systray.AddMenuItem("Connect", "")
-	mConnect.Enable()
+	mConnect.Show()
 	mDisconnect := systray.AddMenuItem("Disconnect", "")
-	mDisconnect.Disable()
+	mDisconnect.Hide()
 
 	if executable("pkexec") {
 		go doConnectionControl(mConnect, "up")
@@ -132,8 +132,8 @@ func onReady() {
 			if err != nil {
 				if enabled {
 					systray.SetTooltip("Tailscale: Disconnected")
-					mConnect.Enable()
-					mDisconnect.Disable()
+					mConnect.Show()
+					mDisconnect.Hide()
 					systray.SetIcon(iconOff)
 					enabled = false
 				}
@@ -149,8 +149,8 @@ func onReady() {
 			if err != nil {
 				if enabled {
 					systray.SetTooltip("Tailscale: Disconnected")
-					mConnect.Enable()
-					mDisconnect.Disable()
+					mConnect.Show()
+					mDisconnect.Hide()
 					systray.SetIcon(iconOff)
 					enabled = false
 					time.Sleep(time.Second)
@@ -159,8 +159,8 @@ func onReady() {
 			}
 			if !enabled {
 				systray.SetTooltip("Tailscale: Connected")
-				mConnect.Disable()
-				mDisconnect.Enable()
+				mConnect.Hide()
+				mDisconnect.Show()
 				systray.SetIcon(iconOn)
 				enabled = true
 			}
