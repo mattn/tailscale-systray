@@ -2,11 +2,11 @@ package main
 
 import (
 	_ "embed"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os/exec"
 	"runtime"
-	"strings"
 	"sync"
 	"time"
 
@@ -126,37 +126,36 @@ func onReady() {
 			found bool
 		}
 		items := map[string]*Item{}
+
 		enabled := false
+		setDisconnected := func() {
+			if enabled {
+				systray.SetTooltip("Tailscale: Disconnected")
+				mConnect.Enable()
+				mDisconnect.Disable()
+				systray.SetIcon(iconOff)
+				enabled = false
+			}
+			time.Sleep(10 * time.Second)
+		}
+
 		for {
-			b, err := exec.Command("tailscale", "ip", "-4").Output()
+			rawStatus, err := exec.Command("tailscale", "status", "--json").Output()
 			if err != nil {
-				if enabled {
-					systray.SetTooltip("Tailscale: Disconnected")
-					mConnect.Enable()
-					mDisconnect.Disable()
-					systray.SetIcon(iconOff)
-					enabled = false
-				}
-				time.Sleep(10 * time.Second)
+				setDisconnected()
+				continue
+			}
+
+			status := new(Status)
+			if err := json.Unmarshal(rawStatus, status); err != nil {
+				setDisconnected()
 				continue
 			}
 
 			mu.Lock()
-			myIP = strings.TrimSpace(string(b))
+			myIP = status.Self.TailscaleIPs[0]
 			mu.Unlock()
 
-			b, err = exec.Command("tailscale", "status").Output()
-			if err != nil {
-				if enabled {
-					systray.SetTooltip("Tailscale: Disconnected")
-					mConnect.Enable()
-					mDisconnect.Disable()
-					systray.SetIcon(iconOff)
-					enabled = false
-					time.Sleep(time.Second)
-				}
-				continue
-			}
 			if !enabled {
 				systray.SetTooltip("Tailscale: Connected")
 				mConnect.Disable()
@@ -168,26 +167,20 @@ func onReady() {
 			for _, v := range items {
 				v.found = false
 			}
-			for _, line := range strings.Split(string(b), "\n") {
-				fields := strings.Fields(line)
-				if len(fields) == 0 {
-					continue
-				}
 
-				ip := fields[0]
-				title := fields[1]
+			mThisDevice.SetTitle(fmt.Sprintf("This device: %s (%s)", status.Self.DisplayName.String(), status.Self.TailscaleIPs[0]))
 
-				if ip == myIP {
-					mThisDevice.SetTitle(fmt.Sprintf("This device: %s (%s)", title, ip))
-					continue
-				}
+			for _, peer := range status.Peers {
+				ip := peer.TailscaleIPs[0]
+				peerName := peer.DisplayName
+				title := peerName.String()
 
 				var sub *systray.MenuItem
-				if strings.HasPrefix(title, "(") {
-					title = strings.Trim(title, `()"`)
-					sub = mTailscaleServices
-				} else {
+				switch peerName.(type) {
+				case DNSName:
 					sub = mMyDevices
+				case HostName:
+					sub = mTailscaleServices
 				}
 
 				if item, ok := items[title]; ok {
@@ -210,7 +203,7 @@ func onReady() {
 							if err != nil {
 								beeep.Notify(
 									"Tailscale",
-									string(b),
+									err.Error(),
 									"",
 								)
 								return
