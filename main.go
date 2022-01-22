@@ -36,12 +36,12 @@ func executable(command string) bool {
 	return err == nil
 }
 
-func doConnectionControl(m *systray.MenuItem, verb string) {
+func doConnectionControl(m *systray.MenuItem, verbs ...string) {
 	for {
 		if _, ok := <-m.ClickedCh; !ok {
 			break
 		}
-		b, err := exec.Command("pkexec", "tailscale", verb).CombinedOutput()
+		b, err := exec.Command("pkexec", verbs...).CombinedOutput()
 		if err != nil {
 			beeep.Notify(
 				"Tailscale",
@@ -57,14 +57,20 @@ func onReady() {
 
 	mConnect := systray.AddMenuItem("Connect", "")
 	mConnect.Enable()
+	mConnectExit := systray.AddMenuItem("Connect using exit node...", "")
+	mConnectExit.Enable()
 	mDisconnect := systray.AddMenuItem("Disconnect", "")
 	mDisconnect.Disable()
 
 	if executable("pkexec") {
-		go doConnectionControl(mConnect, "up")
-		go doConnectionControl(mDisconnect, "down")
+		go doConnectionControl(mConnect,
+			"tailscale", "up",
+			"--exit-node", "",
+			"--exit-node-allow-lan-access=false")
+		go doConnectionControl(mDisconnect, "tailscale", "down")
 	} else {
 		mConnect.Hide()
+		mConnectExit.Hide()
 		mDisconnect.Hide()
 	}
 
@@ -127,12 +133,18 @@ func onReady() {
 		}
 		items := map[string]*Item{}
 		enabled := false
+		exitNodes := map[string]*systray.MenuItem{}
 		for {
 			b, err := exec.Command("tailscale", "ip", "-4").Output()
 			if err != nil {
 				if enabled {
 					systray.SetTooltip("Tailscale: Disconnected")
 					mConnect.Enable()
+					if len(exitNodes) == 0 {
+						mConnectExit.Enable()
+					} else {
+						mConnectExit.Disable()
+					}
 					mDisconnect.Disable()
 					systray.SetIcon(iconOff)
 					enabled = false
@@ -150,6 +162,11 @@ func onReady() {
 				if enabled {
 					systray.SetTooltip("Tailscale: Disconnected")
 					mConnect.Enable()
+					if len(exitNodes) == 0 {
+						mConnectExit.Enable()
+					} else {
+						mConnectExit.Disable()
+					}
 					mDisconnect.Disable()
 					systray.SetIcon(iconOff)
 					enabled = false
@@ -160,6 +177,13 @@ func onReady() {
 			if !enabled {
 				systray.SetTooltip("Tailscale: Connected")
 				mConnect.Disable()
+				if len(exitNodes) == 0 {
+					// Stay enabled even when connected to allow
+					// changing the exit node without having to reconnect
+					mConnectExit.Enable()
+				} else {
+					mConnectExit.Disable()
+				}
 				mDisconnect.Enable()
 				systray.SetIcon(iconOn)
 				enabled = true
@@ -180,6 +204,25 @@ func onReady() {
 				if ip == myIP {
 					mThisDevice.SetTitle(fmt.Sprintf("This device: %s (%s)", title, ip))
 					continue
+				}
+
+				// Show exit nodes
+				if strings.Contains(line, "exit node") {
+					_, ok := exitNodes[ip]
+					if !ok {
+						mConnectExitNode := mConnectExit.AddSubMenuItem(
+							fmt.Sprintf("%s (%s)", title, ip), "")
+
+						mConnectExitNode.Enable()
+						if executable("pkexec") {
+							go doConnectionControl(mConnectExitNode,
+								"tailscale", "up",
+								"--exit-node", string(ip),
+								"--exit-node-allow-lan-access")
+						}
+
+						exitNodes[ip] = mConnectExitNode
+					}
 				}
 
 				var sub *systray.MenuItem
