@@ -2,9 +2,11 @@ package main
 
 import (
 	"encoding/json"
+	"strings"
 )
 
 type Status struct {
+	TailscaleUp bool
 	Self  Machine
 	Peers map[string]Machine
 }
@@ -21,6 +23,8 @@ func (s *Status) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
+	isRunning := strings.Contains(rawStatus.BackendState, "Running")
+
 	peers := map[string]Machine{}
 
 	for name, rawPeer := range rawStatus.Peers {
@@ -30,6 +34,7 @@ func (s *Status) UnmarshalJSON(data []byte) error {
 	self := rawStatus.Self.ToMachine(rawStatus.MagicDNSSuffix)
 
 	*s = Status{
+		TailscaleUp: isRunning,
 		Self:  self,
 		Peers: peers,
 	}
@@ -38,6 +43,7 @@ func (s *Status) UnmarshalJSON(data []byte) error {
 }
 
 type rawStatus struct {
+	BackendState   string
 	Self           RawMachine            `json:"Self"`
 	Peers          map[string]RawMachine `json:"Peer"`
 	MagicDNSSuffix string                `json:"MagicDNSSuffix"`
