@@ -136,7 +136,6 @@ func onReady() {
 				systray.SetIcon(iconOff)
 				enabled = false
 			}
-			time.Sleep(10 * time.Second)
 		}
 
 		for {
@@ -156,12 +155,14 @@ func onReady() {
 			myIP = status.Self.TailscaleIPs[0]
 			mu.Unlock()
 
-			if !enabled {
+			if status.TailscaleUp && !enabled {
 				systray.SetTooltip("Tailscale: Connected")
 				mConnect.Disable()
 				mDisconnect.Enable()
 				systray.SetIcon(iconOn)
 				enabled = true
+			} else if !status.TailscaleUp && enabled{
+				setDisconnected()
 			}
 
 			for _, v := range items {
