@@ -18,10 +18,10 @@ $ tailscale-systray
 
 ### Install requirements
 
-Building app require gcc, libgtk-3-dev, libappindicator-3-dev
+Building app requires gcc, libgtk-3-dev, libayatana-appindicator3-dev
 
 ```
-sudo apt-get install gcc libgtk-3-dev libappindicator3-dev
+sudo apt-get install gcc libgtk-3-dev libayatana-appindicator3-dev
 ```
 
 ### Install app
