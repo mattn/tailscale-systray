@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/atotto/clipboard v0.1.4
 	github.com/gen2brain/beeep v0.0.0-20210529141713-5586760f0cc1
-	github.com/getlantern/systray v1.1.0
+	github.com/getlantern/systray v1.2.1
 	tailscale.com v1.18.2
 )
 
