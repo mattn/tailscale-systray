@@ -152,7 +152,9 @@ func onReady() {
 			}
 
 			mu.Lock()
-			myIP = status.Self.TailscaleIPs[0]
+			if len(status.Self.TailscaleIPs) != 0 {
+				myIP = status.Self.TailscaleIPs[0]
+			}
 			mu.Unlock()
 
 			if status.TailscaleUp && !enabled {
@@ -161,7 +163,7 @@ func onReady() {
 				mDisconnect.Enable()
 				systray.SetIcon(iconOn)
 				enabled = true
-			} else if !status.TailscaleUp && enabled{
+			} else if !status.TailscaleUp && enabled {
 				setDisconnected()
 			}
 
@@ -169,7 +171,7 @@ func onReady() {
 				v.found = false
 			}
 
-			mThisDevice.SetTitle(fmt.Sprintf("This device: %s (%s)", status.Self.DisplayName.String(), status.Self.TailscaleIPs[0]))
+			mThisDevice.SetTitle(fmt.Sprintf("This device: %s (%s)", status.Self.DisplayName.String(), myIP))
 
 			for _, peer := range status.Peers {
 				ip := peer.TailscaleIPs[0]
