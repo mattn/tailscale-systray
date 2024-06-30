@@ -30,7 +30,7 @@ sudo apt-get install gcc libgtk-3-dev libayatana-appindicator3-dev
 go install -v github.com/mattn/tailscale-systray@latest
 ```
 
-At this point you can start it with `tailscale-systray`.
+At this point you can start it with `tailscale-systray`. The executable should be located in `$GOPATH/bin` (if not explicitly set, `$GOPATH` defaults to `$HOME/go` on Linux).
 
 ### Run at startup
 
