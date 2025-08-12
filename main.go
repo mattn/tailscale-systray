@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"sync"
 	"time"
+	"flag"
 
 	"github.com/atotto/clipboard"
 	"github.com/gen2brain/beeep"
@@ -27,8 +28,19 @@ var (
 	myIP string
 )
 
+type app struct {
+	noPkexec bool
+}
+
 func main() {
-	systray.Run(onReady, nil)
+	noPkexec := flag.Bool("no-pkexec", false, "Do not use pkexec to run tailscale commands")
+	flag.Parse()
+	
+	app := &app{
+		noPkexec: *noPkexec,
+	}
+	
+	systray.Run(app.onReady, nil)
 }
 
 func executable(command string) bool {
@@ -36,12 +48,18 @@ func executable(command string) bool {
 	return err == nil
 }
 
-func doConnectionControl(m *systray.MenuItem, verb string) {
+func (a *app) doConnectionControl(m *systray.MenuItem, verb string) {
 	for {
 		if _, ok := <-m.ClickedCh; !ok {
 			break
 		}
-		b, err := exec.Command("pkexec", "tailscale", verb).CombinedOutput()
+		
+		cmd := []string{"pkexec", "tailscale", verb}
+		if a.noPkexec {
+			cmd = []string{"tailscale", verb}
+		}
+
+		b, err := exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
 		if err != nil {
 			beeep.Notify(
 				"Tailscale",
@@ -52,7 +70,7 @@ func doConnectionControl(m *systray.MenuItem, verb string) {
 	}
 }
 
-func onReady() {
+func (a *app) onReady() {
 	systray.SetIcon(iconOff)
 
 	mConnect := systray.AddMenuItem("Connect", "")
@@ -60,9 +78,9 @@ func onReady() {
 	mDisconnect := systray.AddMenuItem("Disconnect", "")
 	mDisconnect.Disable()
 
-	if executable("pkexec") {
-		go doConnectionControl(mConnect, "up")
-		go doConnectionControl(mDisconnect, "down")
+	if a.noPkexec || executable("pkexec") {
+		go a.doConnectionControl(mConnect, "up")
+		go a.doConnectionControl(mDisconnect, "down")
 	} else {
 		mConnect.Hide()
 		mDisconnect.Hide()
