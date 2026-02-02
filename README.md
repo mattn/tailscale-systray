@@ -18,10 +18,10 @@ $ tailscale-systray
 
 ### Install requirements
 
-Building app requires go, gcc, libgtk-3-dev, libayatana-appindicator3-dev
+Building app requires go
 
 ```
-sudo apt-get install golang-go gcc libgtk-3-dev libayatana-appindicator3-dev
+sudo apt-get install golang-go
 ```
 
 ### Install app
